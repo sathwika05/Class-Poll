@@ -4,7 +4,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.routers import sessions, polls, participants, exports, analytics
+from app.routers import sessions, polls, participants, exports, analytics, teams
 from app.websocket_manager import manager
 
 
@@ -39,11 +39,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(sessions.router, prefix="/api", tags=["sessions"])
-app.include_router(polls.router, prefix="/api", tags=["polls"])
+app.include_router(sessions.router,    prefix="/api", tags=["sessions"])
+app.include_router(polls.router,       prefix="/api", tags=["polls"])
 app.include_router(participants.router, prefix="/api", tags=["participants"])
-app.include_router(exports.router, prefix="/api", tags=["exports"])
-app.include_router(analytics.router, prefix="/api", tags=["analytics"])
+app.include_router(exports.router,     prefix="/api", tags=["exports"])
+app.include_router(analytics.router,   prefix="/api", tags=["analytics"])
+app.include_router(teams.router,       prefix="/api", tags=["teams"])        # ← NEW
 
 
 @app.websocket("/ws/sessions/{session_id}")
@@ -55,7 +56,6 @@ async def websocket_endpoint(
     await manager.connect(session_id, websocket)
     try:
         while True:
-            # Keep connection alive; process pings from clients
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
