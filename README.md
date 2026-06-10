@@ -21,7 +21,8 @@ AI-Class-Poll/
 │   │       ├── polls.py     # Poll lifecycle + voting APIs
 │   │       ├── participants.py  # Join / reconnect API
 │   │       ├── exports.py       # CSV export endpoints
-│   │       └── analytics.py     # Analytics & insights APIs
+│   │       ├── analytics.py     # Analytics & insights APIs
+│   │       └── ai.py            # AI quiz, summary, sentiment, and trend APIs
 │   │   ├── analytics_service.py # Aggregation logic for analytics
 │   └── requirements.txt
 │
@@ -91,6 +92,7 @@ If the page loads but join fails, the backend is still bound to localhost — re
 | `/professor` | Professor dashboard — create sessions, manage polls, see live results & attendance |
 | `/analytics` | Analytics & insights — attendance trends, engagement metrics, semester report |
 | `/student` | Student page — join with a code and vote on polls |
+| `/ai-demo` | Demo page — preview AI-powered teaching tools |
 | `/display/[session-id]` | Projector-friendly live display for a session |
 
 ---
@@ -134,6 +136,14 @@ If the page loads but join fails, the backend is still bound to localhost — re
 - Shows active poll question with animated progress bars
 - Percentages and vote counts update in real-time
 - Auto-reconnects WebSocket on disconnect
+
+### AI-Powered Features
+- Generate multiple-choice quiz questions from lecture notes
+- Generate live polls from lecture notes
+- Create automatic session summaries from attendance, poll results, and student comments
+- Analyze student engagement using attendance and voting patterns
+- Analyze sentiment from classroom text responses
+- Recommend follow-up lessons and future poll ideas from learning trends
 
 ---
 
@@ -182,6 +192,16 @@ If the page loads but join fails, the backend is still bound to localhost — re
 | GET | `/api/analytics/question-difficulty` | Question difficulty ranking |
 | GET | `/api/analytics/performance` | Per-session performance analytics |
 | GET | `/api/analytics/sessions/{id}` | Single-session drill-down |
+
+### AI
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/ai/quiz-questions` | Generate multiple-choice quiz questions |
+| POST | `/api/ai/polls-from-notes` | Generate live poll questions from lecture notes |
+| POST | `/api/ai/session-summary` | Summarize a completed or active session |
+| POST | `/api/ai/engagement-analysis` | Analyze attendance and voting engagement |
+| POST | `/api/ai/sentiment-analysis` | Analyze sentiment from text responses |
+| POST | `/api/ai/learning-recommendations` | Recommend follow-up lessons and future poll ideas |
 
 ### WebSocket
 ```
@@ -244,7 +264,16 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_WS_URL=ws://localhost:8000
 ```
 
-### Backend (optional — for PostgreSQL instead of SQLite)
+### Backend AI
+
+Create `backend/.env` or export these variables before starting FastAPI:
+
+```env
+OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-5.5
+```
+
+### Backend Database (optional — for PostgreSQL instead of SQLite)
 
 Edit `backend/app/database.py` and change `DATABASE_URL`:
 

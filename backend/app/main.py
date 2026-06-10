@@ -4,7 +4,11 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
+<<<<<<< HEAD
 from app.routers import sessions, polls, participants, exports, analytics, teams
+=======
+from app.routers import sessions, polls, participants, exports, analytics, ai
+>>>>>>> 6847ae5 (Add AI-powered ClassPoll features)
 from app.websocket_manager import manager
 
 
@@ -42,9 +46,15 @@ app.add_middleware(
 app.include_router(sessions.router,    prefix="/api", tags=["sessions"])
 app.include_router(polls.router,       prefix="/api", tags=["polls"])
 app.include_router(participants.router, prefix="/api", tags=["participants"])
+<<<<<<< HEAD
 app.include_router(exports.router,     prefix="/api", tags=["exports"])
 app.include_router(analytics.router,   prefix="/api", tags=["analytics"])
 app.include_router(teams.router,       prefix="/api", tags=["teams"])        # ← NEW
+=======
+app.include_router(exports.router, prefix="/api", tags=["exports"])
+app.include_router(analytics.router, prefix="/api", tags=["analytics"])
+app.include_router(ai.router, prefix="/api", tags=["ai"])
+>>>>>>> 6847ae5 (Add AI-powered ClassPoll features)
 
 
 @app.websocket("/ws/sessions/{session_id}")

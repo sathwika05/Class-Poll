@@ -3,7 +3,7 @@ import Link from 'next/link'
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full text-center">
+      <div className="max-w-5xl w-full text-center">
         <div className="mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-2xl mb-6">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,7 +15,7 @@ export default function Home() {
           <p className="text-blue-200 text-xl">Real-time classroom polling &amp; attendance</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
           <Link href="/professor" className="group bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1">
             <div className="flex flex-col items-center">
               <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
@@ -52,6 +52,19 @@ export default function Home() {
               </div>
               <h2 className="text-xl font-bold text-gray-800 mb-2">Analytics</h2>
               <p className="text-gray-500 text-sm text-center">Advanced dashboard with attendance, engagement, and performance insights</p>
+            </div>
+          </Link>
+
+          <Link href="/ai-demo" className="group bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1">
+            <div className="flex flex-col items-center">
+              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
+                <svg className="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9.75 3.75L8.25 8.25 3.75 9.75l4.5 1.5 1.5 4.5 1.5-4.5 4.5-1.5-4.5-1.5-1.5-4.5zM17.25 12.75l-.9 2.7-2.7.9 2.7.9.9 2.7.9-2.7 2.7-.9-2.7-.9-.9-2.7z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">AI Demo</h2>
+              <p className="text-gray-500 text-sm text-center">Preview quiz generation, summaries, sentiment, and learning trends</p>
             </div>
           </Link>
         </div>
