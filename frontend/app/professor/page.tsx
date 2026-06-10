@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import type { Session, Poll, Participant, PollResults, WSEvent } from '@/lib/types'
 import { getSession, listPolls, getAttendance } from '@/lib/api'
@@ -8,14 +8,24 @@ import SessionPanel from '@/components/professor/SessionPanel'
 import PollPanel from '@/components/professor/PollPanel'
 import AttendancePanel from '@/components/professor/AttendancePanel'
 import ResultsPanel from '@/components/professor/ResultsPanel'
+import TeamsPanel, { fireTeamsNotification } from '@/components/professor/TeamsPanel'  // ← NEW
 
 export default function ProfessorPage() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [polls, setPolls] = useState<Poll[]>([])
+  const [session, setSession]         = useState<Session | null>(null)
+  const [polls, setPolls]             = useState<Poll[]>([])
   const [participants, setParticipants] = useState<Participant[]>([])
-  const [results, setResults] = useState<Map<number, PollResults>>(new Map())
-  const [connected, setConnected] = useState(false)
-  const [socketRef, setSocketRef] = useState<SessionSocket | null>(null)
+  const [results, setResults]         = useState<Map<number, PollResults>>(new Map())
+  const [connected, setConnected]     = useState(false)
+  const [socketRef, setSocketRef]     = useState<SessionSocket | null>(null)
+
+  // Keep a ref to results so the WS handler always reads the latest value
+  // without needing it as a useCallback dependency.
+  const resultsRef = useRef(results)                                           // ← NEW
+  useEffect(() => { resultsRef.current = results }, [results])                 // ← NEW
+
+  // Keep a ref to session for the same reason.
+  const sessionRef = useRef(session)                                           // ← NEW
+  useEffect(() => { sessionRef.current = session }, [session])                 // ← NEW
 
   // Handle WebSocket events
   const handleWSEvent = useCallback((event: WSEvent) => {
@@ -26,14 +36,38 @@ export default function ProfessorPage() {
       case 'session_resumed':
       case 'session_closed':
         setSession(prev => prev ? { ...prev, status: d.status as Session['status'] } : prev)
+
+        // ── Teams notifications ──────────────────────────────────────────── NEW
+        if (event.type === 'session_started' && sessionRef.current) {
+          fireTeamsNotification('session_started', {
+            name: sessionRef.current.name,
+            code: sessionRef.current.code,
+          })
+        }
+        if (event.type === 'session_closed' && sessionRef.current) {
+          fireTeamsNotification('session_closed', {
+            name:              sessionRef.current.name,
+            participant_count: sessionRef.current.participant_count,
+            poll_count:        sessionRef.current.poll_count,
+          })
+        }
+        // ─────────────────────────────────────────────────────────────────────
         break
+
       case 'participant_joined':
       case 'attendance_updated': {
-        const raw = (d.participants ?? []) as Array<{ id: number; name: string; student_id: string | null; joined_at: string }>
-        setParticipants(raw.map(p => ({ id: p.id, name: p.name, student_id: p.student_id, joined_at: p.joined_at })))
-        setSession(prev => prev ? { ...prev, participant_count: (d.count as number) ?? prev.participant_count } : prev)
+        const raw = (d.participants ?? []) as Array<{
+          id: number; name: string; student_id: string | null; joined_at: string
+        }>
+        setParticipants(raw.map(p => ({
+          id: p.id, name: p.name, student_id: p.student_id, joined_at: p.joined_at,
+        })))
+        setSession(prev =>
+          prev ? { ...prev, participant_count: (d.count as number) ?? prev.participant_count } : prev
+        )
         break
       }
+
       case 'poll_created': {
         const poll = d as unknown as Poll
         setPolls(prev => {
@@ -43,22 +77,40 @@ export default function ProfessorPage() {
         setSession(prev => prev ? { ...prev, poll_count: prev.poll_count + 1 } : prev)
         break
       }
+
       case 'poll_opened':
       case 'poll_paused':
       case 'poll_resumed':
       case 'poll_closed': {
         const updatedPoll = d as unknown as Poll
         if (updatedPoll.id) {
-          setPolls(prev => prev.map(p =>
-            p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p
-          ))
+          setPolls(prev =>
+            prev.map(p => p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p)
+          )
         }
+
+        // ── Teams notifications ──────────────────────────────────────────── NEW
+        if (event.type === 'poll_opened' && updatedPoll.question) {
+          fireTeamsNotification('poll_opened', {
+            question: updatedPoll.question,
+            options:  (updatedPoll.options ?? []).map((o: { text: string }) => o.text),
+          })
+        }
+        if (event.type === 'poll_closed' && updatedPoll.id) {
+          const pollResults = resultsRef.current.get(updatedPoll.id)
+          fireTeamsNotification('poll_closed', {
+            question: updatedPoll.question,
+            results:  pollResults ?? null,
+          })
+        }
+        // ─────────────────────────────────────────────────────────────────────
         break
       }
+
       case 'results_updated':
       case 'vote_submitted': {
         const pollId = d.poll_id as number
-        const r = d.results as PollResults
+        const r      = d.results as PollResults
         if (pollId && r) {
           setResults(prev => new Map(prev).set(pollId, r))
         }
@@ -74,23 +126,13 @@ export default function ProfessorPage() {
     const id = parseInt(savedId)
     if (isNaN(id)) return
 
-    Promise.all([
-      getSession(id),
-      listPolls(id),
-      getAttendance(id),
-    ]).then(([sess, pollList, att]) => {
-      if (sess.status === 'closed') {
+    Promise.all([getSession(id), listPolls(id), getAttendance(id)])
+      .then(([sess, pollList, att]) => {
         setSession(sess)
         setPolls(pollList)
         setParticipants(att.participants)
-      } else {
-        setSession(sess)
-        setPolls(pollList)
-        setParticipants(att.participants)
-      }
-    }).catch(() => {
-      localStorage.removeItem('prof_session_id')
-    })
+      })
+      .catch(() => localStorage.removeItem('prof_session_id'))
   }, [])
 
   // Connect WebSocket when session changes
@@ -112,12 +154,13 @@ export default function ProfessorPage() {
     setPolls([])
     setParticipants([])
     setResults(new Map())
-    if (!s) {
-      localStorage.removeItem('prof_session_id')
-    }
+    if (!s) localStorage.removeItem('prof_session_id')
   }, [])
 
-  const activePoll = polls.find(p => p.status === 'open') ?? polls.find(p => p.status === 'paused') ?? null
+  const activePoll =
+    polls.find(p => p.status === 'open') ??
+    polls.find(p => p.status === 'paused') ??
+    null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -174,21 +217,29 @@ export default function ProfessorPage() {
         <SessionPanel session={session} onSessionChange={handleSessionChange} />
 
         {session && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {/* Left: polls */}
-            <div className="lg:col-span-1">
-              <PollPanel session={session} polls={polls} onPollsChange={setPolls} />
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Left: polls */}
+              <div className="lg:col-span-1">
+                <PollPanel session={session} polls={polls} onPollsChange={setPolls} />
+              </div>
+              {/* Middle: live results */}
+              <div className="lg:col-span-1">
+                <ResultsPanel polls={polls} results={results} />
+              </div>
+              {/* Right: attendance */}
+              <div className="lg:col-span-1">
+                <AttendancePanel participants={participants} sessionId={session.id} />
+              </div>
             </div>
-            {/* Middle: live results */}
-            <div className="lg:col-span-1">
-              <ResultsPanel polls={polls} results={results} />
-            </div>
-            {/* Right: attendance */}
-            <div className="lg:col-span-1">
-              <AttendancePanel participants={participants} sessionId={session.id} />
-            </div>
-          </div>
+
+            {/* Teams integration panel — full width, below the main grid */}
+            <TeamsPanel />                                                       {/* ← NEW */}
+          </>
         )}
+
+        {/* Show Teams panel even before a session is created */}
+        {!session && <TeamsPanel />}                                             {/* ← NEW */}
       </main>
     </div>
   )
