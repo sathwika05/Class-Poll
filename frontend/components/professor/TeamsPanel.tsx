@@ -59,19 +59,27 @@ interface TeamsPanelProps {
 export default function TeamsPanel({ className = '' }: TeamsPanelProps) {
   const [webhookUrl, setWebhookUrl] = useState('')
   const [enabled, setEnabled]       = useState(false)
+  const [savedUrl, setSavedUrl]     = useState('')
+  const [savedEnabled, setSavedEnabled] = useState(false)
   const [saved, setSaved]           = useState(false)
   const [testing, setTesting]       = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (client only)
   useEffect(() => {
-    setWebhookUrl(localStorage.getItem(KEY_URL) || '')
-    setEnabled(localStorage.getItem(KEY_ENABLED) === 'true')
+    const url = localStorage.getItem(KEY_URL) || ''
+    const en  = localStorage.getItem(KEY_ENABLED) === 'true'
+    setWebhookUrl(url)
+    setEnabled(en)
+    setSavedUrl(url)
+    setSavedEnabled(en)
   }, [])
 
   const handleSave = () => {
     localStorage.setItem(KEY_URL, webhookUrl)
     localStorage.setItem(KEY_ENABLED, String(enabled))
+    setSavedUrl(webhookUrl)
+    setSavedEnabled(enabled)
     setSaved(true)
     setTestStatus('idle')
     setTimeout(() => setSaved(false), 2000)
@@ -95,9 +103,7 @@ export default function TeamsPanel({ className = '' }: TeamsPanelProps) {
     }
   }
 
-  const isDirty =
-    webhookUrl !== (localStorage.getItem(KEY_URL) || '') ||
-    enabled    !== (localStorage.getItem(KEY_ENABLED) === 'true')
+  const isDirty = webhookUrl !== savedUrl || enabled !== savedEnabled
 
   return (
     <div className={`bg-white rounded-xl border border-gray-200 p-4 ${className}`}>
