@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "groq-sdk": "^1.2.1",
     "next": "14.0.4",
     "qrcode.react": "^4.2.0",
     "react": "^18",
